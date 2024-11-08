@@ -3,12 +3,14 @@ import { MenuController } from '../controllers/menu.controller.js'
 import { validateMenuItem } from '../dto/in/menu.dto.js'
 import { handleValidationErrors } from '../middlewares/validation.middleware.js'
 import { authenticationAdmin, requireApiKey } from '../middlewares/useApiKey.middleware.js'
+import uploadFiles from '../middlewares/upload.middleware.js'
 const MenuRouter = express.Router()
 MenuRouter.post(
   '/',
   requireApiKey,
   authenticationAdmin,
   validateMenuItem,
+  uploadFiles,
   handleValidationErrors,
   MenuController.createMenuItem
 )
@@ -27,6 +29,7 @@ MenuRouter.put(
   authenticationAdmin,
   validateMenuItem,
   handleValidationErrors,
+  uploadFiles,
   MenuController.updateMenuItemById
 )
 MenuRouter.delete(

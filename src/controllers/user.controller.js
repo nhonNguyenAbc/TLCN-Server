@@ -32,7 +32,7 @@ const register = async (req, res, next) => {
     const result = await UserService.register(req.body)
     next(new Response(HttpStatusCode.Created, 'Đăng ký thành công', result).resposeHandler(res))
   } catch (error) {
-    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+     return new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res)
   }
 }
 const getUserById = async (req, res, next) => {

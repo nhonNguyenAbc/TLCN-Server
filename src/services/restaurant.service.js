@@ -9,23 +9,100 @@ import { TableModel } from '../models/tables.model.js'
 import MenuItem from '../models/menus.model.js'
 import { ConflictError } from '../errors/conflict.error.js'
 
-const getAllRestaurant = async (page = 1, size = 5, field, sort) => {
+const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = '', priceRange = 'all') => {
+  const regex = new RegExp(searchTerm, 'i'); 
+  const matchConditions = { deleted_at: null, $or: [{ name: regex }, { address: regex }] };
+
+  if (priceRange === 'under_200k') {
+    matchConditions.price_per_table = { $lt: 200000 };
+  } else if (priceRange === '200k_500k') {
+    matchConditions.price_per_table = { $gte: 200000, $lte: 500000 };
+  } else if (priceRange === '500k_1m') {
+    matchConditions.price_per_table = { $gte: 500000, $lte: 1000000 };
+  } else if (priceRange === 'above_1m') {
+    matchConditions.price_per_table = { $gt: 1000000 };
+  }
+
   const restaurants = await RestaurantModel.aggregate([
-    { $match: { deleted_at: null } },
-    { $skip: (page - 1) * size },
-    { $limit: size },
-    { $sort: { [field]: Number(sort) } },
+    { $match: matchConditions },
+    {
+      $lookup: {
+        from: 'promotions',
+        localField: 'promotions', 
+        foreignField: 'code', 
+        as: 'promotionDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$promotionDetails',
+        preserveNullAndEmptyArrays: true 
+      }
+    },
     {
       $project: {
-        created_at: 0,
-        updated_at: 0,
-        deleted_at: 0
+        name: 1,
+        address: 1,
+        openTime: 1,
+        closeTime: 1,
+        description: 1,
+        image_url: 1,
+        price_per_table: 1,
+        createdAt:1,
+        promotionDetails: {
+          $cond: {
+            if: { $eq: ['$promotionDetails.status', 'active'] }, 
+            then: {
+              name: '$promotionDetails.name',
+              description: '$promotionDetails.description',
+              discountValue: '$promotionDetails.discountValue',
+              startDate: '$promotionDetails.startDate',
+              endDate: '$promotionDetails.endDate'
+            },
+            else: null 
+          }
+        }
       }
-    }
-  ])
-  const total = await RestaurantModel.countDocuments({ deleted_at: null })
-  return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } }
-}
+    },
+    { $sort: { [field]: Number(sort) } },
+    { $skip: (page - 1) * size },
+    { $limit: size },
+  ]);
+
+  const total = await RestaurantModel.countDocuments(matchConditions);
+
+  return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } };
+};
+
+// const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm) => {
+//   const filter = { deleted_at: null };
+
+//   // Thêm điều kiện tìm kiếm nếu có searchTerm
+//   if (searchTerm) {
+//     filter.$or = [
+//       { name: { $regex: searchTerm, $options: 'i' } },
+//       { address: { $regex: searchTerm, $options: 'i' } }
+//     ];
+//   }
+
+//   const restaurants = await RestaurantModel.aggregate([
+//     { $match: filter },
+//     { $skip: (page - 1) * size },
+//     { $limit: size },
+//     { $sort: { [field]: Number(sort) } },
+//     {
+//       $project: {
+//         created_at: 0,
+//         updated_at: 0,
+//         deleted_at: 0
+//       }
+//     }
+//   ]);
+
+//   const total = await RestaurantModel.countDocuments(filter);
+//   return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } };
+// }
+
 const getAllRestaurantByUserId = async (id, page = 1, size = 5) => {
   const restaurants = await RestaurantModel.aggregate([
     { $match: { deleted_at: null, user_id: id } },
@@ -42,13 +119,112 @@ const getAllRestaurantByUserId = async (id, page = 1, size = 5) => {
   const total = await RestaurantModel.countDocuments({ deleted_at: null, user_id: id })
   return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } }
 }
+
+const getAllRestaurantWithPromotions = async (page = 1, size = 5) => {
+  const restaurantsWithPromotions = await RestaurantModel.aggregate([
+    { $match: { deleted_at: null } },
+    {
+      $lookup: {
+        from: 'promotions', 
+        localField: 'promotions', 
+        foreignField: 'code', 
+        as: 'promotionDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$promotionDetails',
+        preserveNullAndEmptyArrays: true 
+      }
+    },
+    {
+      $match: {
+        'promotionDetails.status': 'active' 
+      }
+    },
+    {
+      $project: {
+        name: 1,
+        address: 1,
+        openTime: 1,
+        closeTime: 1,
+        description: 1,
+        image_url: 1,
+        price_per_table: 1,
+        promotionDetails: {
+          name: '$promotionDetails.name',
+          description: '$promotionDetails.description',
+          discountValue: '$promotionDetails.discountValue',
+          startDate: '$promotionDetails.startDate',
+          endDate: '$promotionDetails.endDate',
+          code: '$promotionDetails.code'
+        }
+      }
+    },
+    { $sort: { 'promotionDetails.discountValue': -1 } },
+    { $skip: (page - 1) * size },
+    { $limit: size },
+  ]);
+  const total = await RestaurantModel.aggregate([
+    { $match: { deleted_at: null } },
+    {
+      $lookup: {
+        from: 'promotions',
+        localField: 'promotions',
+        foreignField: 'code',
+        as: 'promotionDetails'
+      }
+    },
+    { $unwind: { path: '$promotionDetails', preserveNullAndEmptyArrays: true } },
+    {
+      $match: {
+        'promotionDetails.status': 'active'
+      }
+    },
+    { $count: 'total' } 
+  ]);
+
+  const totalCount = total.length > 0 ? total[0].total : 0; 
+
+  return { data: restaurantsWithPromotions, info: { total: totalCount, page, size, number_of_pages: Math.ceil(totalCount / size) } };
+};
+
 const getRestaurantById = async (id) => {
   const restaurant = await RestaurantModel.aggregate([
     { $match: { _id: Types.ObjectId.createFromHexString(id), deleted_at: null } },
-    { $lookup: { from: 'users', localField: 'user_id', foreignField: '_id', as: 'user' } },
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'user_id',
+        foreignField: '_id',
+        as: 'user'
+      }
+    },
+    {
+      $lookup: {
+        from: 'promotions', 
+        localField: 'promotions', 
+        foreignField: 'code',
+        as: 'promotionDetails'
+      }
+    },
+    {
+      $unwind: {
+        path: '$promotionDetails',
+        preserveNullAndEmptyArrays: true
+      }
+    },
+    {
+      $match: {
+        $or: [
+          { 'promotionDetails.status': 'active' },
+          { 'promotionDetails': { $eq: null } }
+        ]
+      }
+    },
     {
       $project: {
-        user: '$user.name',
+        user: { $arrayElemAt: ['$user.name', 0] },
         name: 1,
         address: 1,
         openTime: 1,
@@ -64,36 +240,37 @@ const getRestaurantById = async (id) => {
         public_id_slider2: 1,
         public_id_slider3: 1,
         public_id_slider4: 1,
-        price_per_table: 1
+        price_per_table: 1,
+        promotionDetails: {
+          name: '$promotionDetails.name',
+          description: '$promotionDetails.description',
+          discountValue: '$promotionDetails.discountValue',
+          startDate: '$promotionDetails.startDate',
+          endDate: '$promotionDetails.endDate'
+        }
       }
     }
-  ]).exec()
+  ]).exec();
   const tables = await TableModel.aggregate([
     { $match: { restaurant_id: Types.ObjectId.createFromHexString(id), deleted_at: null } },
-    {
-      $project: {
-        created_at: 0,
-        updated_at: 0,
-        deleted_at: 0
-      }
-    },
     {
       $project: {
         number_of_tables: 1,
         people_per_table: 1
       }
     }
-  ]).exec()
-  const totalPeople = tables.reduce((total, table) => total + table.people_per_table * table.number_of_tables, 0)
-  const menus = await MenuItem.find({ restaurant_id: id, deleted_at: null }).exec()
+  ]).exec();
+  const totalPeople = tables.reduce((total, table) => total + table.people_per_table * table.number_of_tables, 0);
+  const menus = await MenuItem.find({ restaurant_id: id, deleted_at: null }).exec();
   return restaurant.length > 0
     ? {
         restaurant: restaurant[0],
         totalPeople,
         menus
       }
-    : null
-}
+    : null;
+};
+
 const getRestaurantIdAndNameByUserId = (id) => {
   return RestaurantModel.find({ user_id: id, deleted_at: null }).select('_id name').exec()
 }
@@ -162,7 +339,8 @@ const createRestaurant = async (
     public_id_slider3,
     public_id_slider4,
     price_per_table,
-    user_id: id
+    user_id: id,
+  
   })
   return await newRestaurant.save()
 }
@@ -185,7 +363,8 @@ const updateRestaurant = async (
     public_id_slider2,
     public_id_slider3,
     public_id_slider4,
-    price_per_table
+    price_per_table,
+    promotions
   }
 ) => {
   const existingRestaurant = await RestaurantModel.findOne({ name, address }).exec()
@@ -194,9 +373,9 @@ const updateRestaurant = async (
   }
   const restaurant = await getRestaurantById(id)
 
-  if (!restaurant || restaurant.deleted_at) {
-    throw new NotFoundError('Nhà hàng không tìm thấy')
-  }
+  // if (!restaurant || restaurant.deleted_at) {
+  //   throw new NotFoundError('Nhà hàng không tìm thấy')
+  // }
 
   const result = await RestaurantModel.updateOne(
     { _id: Types.ObjectId.createFromHexString(id) },
@@ -217,6 +396,7 @@ const updateRestaurant = async (
       public_id_slider3,
       public_id_slider4,
       price_per_table,
+      promotions,
       updated_at: Date.now()
     }
   )
@@ -523,5 +703,6 @@ export const RestaurantService = {
   getLatLngFromAddress,
   getAllRestaurantByFilterAndSort,
   getRestaurantIdAndNameByUserId,
-  getAllRestaurantByUserId
+  getAllRestaurantByUserId,
+  getAllRestaurantWithPromotions
 }

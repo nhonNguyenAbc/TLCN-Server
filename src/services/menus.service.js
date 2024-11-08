@@ -3,7 +3,7 @@ import mongoose, { Types } from 'mongoose'
 import { RestaurantModel } from '../models/restaurants.model.js'
 import { BadRequestError } from '../errors/badRequest.error.js'
 import { NotFoundError } from '../errors/notFound.error.js'
-const createMenuItem = async ({ code, name, category, description, unit, price, discount, restaurant_id }) => {
+const createMenuItem = async ({ code, name, category, description, unit, price, discount, restaurant_id }, image) => {
   const restaurant = await RestaurantModel.find({
     _id: restaurant_id,
     deleted_at: null
@@ -23,6 +23,7 @@ const createMenuItem = async ({ code, name, category, description, unit, price, 
     name,
     category,
     description,
+    image,
     unit,
     price,
     discount,
@@ -71,7 +72,8 @@ const getAllMenuItems = async (page = 1, size = 5) => {
         restaurant: {
           name: 1,
           _id: 1
-        }
+        },
+        image:1
       }
     }
   ])
@@ -188,7 +190,7 @@ const getMenuItemById = async (id) => {
   return item
 }
 
-const updateMenuItemById = async (id, { code, name, category, description, unit, price, discount, restaurant_id }) => {
+const updateMenuItemById = async (id, { code, name, category, description, unit, price, discount, restaurant_id, image }) => {
   return await MenuItem.findByIdAndUpdate(
     Types.ObjectId.createFromHexString(id),
     {
@@ -197,6 +199,7 @@ const updateMenuItemById = async (id, { code, name, category, description, unit,
         name,
         category,
         description,
+        image,
         unit,
         price,
         discount,

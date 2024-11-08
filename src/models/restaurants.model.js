@@ -21,12 +21,12 @@ const Restaurant = new Schema(
     public_id_slider3: { type: String, required: true },
     public_id_slider4: { type: String, required: true },
     price_per_table: { type: Number, required: true },
-    created_at: { type: Date, required: true, default: Date.now },
+    promotions: { type: String },
+    createdAt: { type: Date, required: true, default: Date.now },
     updated_at: { type: Date, required: true, default: Date.now },
     deleted_at: { type: Date, default: null },
     user_id: { type: ObjectId, refs: 'Users', required: true }
   },
-  { timestamps: true }
 )
 const RestaurantModel = mongoose.model('Restaurants', Restaurant)
 

@@ -6,11 +6,11 @@ const doc = {
     title: 'Mindx Restaurant API', // by default: 'REST API'
     description: '' // by default: ''
   },
-  host: 'team1-tc24-server.onrender.com', // by default: 'localhost:3000'
+  host: 'localhost:7000', // by default: 'localhost:3000'
   basePath: '/', // by default: '/'
   servers: [
     {
-      url: 'https://team1-tc24-server.onrender.com',
+      url: 'localhost:7000',
       description: '' // by default: ''
     }
     // { ... }

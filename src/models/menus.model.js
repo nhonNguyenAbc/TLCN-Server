@@ -9,6 +9,10 @@ const menuItemSchema = new mongoose.Schema(
       required: true,
       enum: ['Dish', 'Beverage', 'Dessert']
     },
+    image: {
+      url: {type: String, required: true},
+      id: {type: String, required: true}
+    },
     description: { type: String, required: true },
     unit: { type: String, required: true },
     price: { type: Number, required: true },

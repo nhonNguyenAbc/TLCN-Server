@@ -12,6 +12,8 @@ import { authenticationAdmin, authenticationStaff, requireApiKey } from '../midd
 const RestaurantRouter = express.Router()
 
 RestaurantRouter.get('/', RestaurangGetAllValidation, handleValidationErrors, RestaurantController.getAllRestaurant)
+RestaurantRouter.get('/promotions', RestaurangGetAllValidation, handleValidationErrors, RestaurantController.getAllRestaurantWithPromotions)
+
 RestaurantRouter.get(
   '/restaurant/:id',
   RestaurantGetByIdValidation,
@@ -29,7 +31,6 @@ RestaurantRouter.post(
 RestaurantRouter.put(
   '/restaurant/:id',
   RestaurantUpdateValidation,
-  handleValidationErrors,
   requireApiKey,
   authenticationAdmin,
   RestaurantController.updateRestaurant

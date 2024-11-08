@@ -5,5 +5,6 @@ export class BadRequestError extends BaseError {
   constructor(message) {
     super(message)
     this.statusCode = HttpStatusCode.BadRequest
+    
   }
 }

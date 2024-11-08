@@ -5,7 +5,11 @@ import { HttpStatusCode } from 'axios'
 import { LogService } from '../services/log.service.js'
 const createMenuItem = async (req, res, next) => {
   try {
-    const newItem = await MenuService.createMenuItem(req.body)
+    const image = {
+      url: req.file.path, 
+      id: req.file.filename
+  }
+    const newItem = await MenuService.createMenuItem(req.body, image)
     await LogService.createLog(req.user.id, 'Tạo menu')
     next(new Response(HttpStatusCode.Created, 'Menu đã được tạo', newItem).resposeHandler(res))
   } catch (error) {
@@ -43,7 +47,14 @@ const getMenuItemById = async (req, res, next) => {
 
 const updateMenuItemById = async (req, res, next) => {
   try {
-    const item = await MenuService.updateMenuItemById(req.params.id, req.body)
+    const updates = req.body;  
+    if (req.file) {
+      updates.image = {
+          url: req.file.path,   
+          id: req.file.filename 
+      };
+  }
+    const item = await MenuService.updateMenuItemById(req.params.id, updates)
     await LogService.createLog(req.user.id, 'Chỉnh sửa menu' + req.params.id)
     next(new Response(HttpStatusCode.Ok, 'Menu đã được cập nhật', item).resposeHandler(res))
   } catch (error) {
@@ -73,6 +84,7 @@ const findMenuByAnyField = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+
 const countMenu = async (req, res, next) => {
   try {
     const result = await MenuService.countMenu()

@@ -10,24 +10,34 @@ import { StaffService } from '../services/staff.service.js'
 const getAllRestaurant = async (req, res, next) => {
   // #swagger.tags=['Restaurant']
   try {
-    let data
-    const { upper, lower, sort, page, size, field } = req.query
-    if (size) {
-      const { upper, lower, sort, page } = req.query
-      data = await RestaurantService.getAllRestaurant(
-        Number(page) || 1,
-        Number(size) || 5,
-        Number(field),
-        Number(sort) || -1
-      )
-    } else {
-      data = await RestaurantService.getAllRestaurantByFilterAndSort(upper, lower, sort, Number(page) || 1)
-    }
-    next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res))
+    const { sort, page, size, field, searchTerm, priceRange } = req.query; // Thêm priceRange vào đây
+    const data = await RestaurantService.getAllRestaurant(
+      Number(page) || 1,
+      Number(size) || 6,
+      field, // field không cần chuyển đổi sang Number nếu nó là một chuỗi
+      Number(sort) || -1,
+      searchTerm,
+      priceRange // Truyền priceRange vào hàm Service
+    );
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res));
   } catch (error) {
-    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res));
   }
-}
+};
+const getAllRestaurantWithPromotions = async (req, res, next) => {
+  // #swagger.tags=['Restaurant']
+  try {
+    const { page, size} = req.query; 
+    const data = await RestaurantService.getAllRestaurantWithPromotions(
+      Number(page) || 1,
+      Number(size) || 6
+    );
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res));
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res));
+  }
+};
+
 const getAllRestaurantByUserId = async (req, res, next) => {
   // #swagger.tags=['Restaurant']
   try {
@@ -160,5 +170,6 @@ export const RestaurantController = {
   countRestaurant,
   getRestaurantIdAndNameByUserId,
   getAllRestaurantByUserId,
-  getStaffRestaurant
+  getStaffRestaurant,
+  getAllRestaurantWithPromotions
 }

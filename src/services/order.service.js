@@ -419,6 +419,7 @@ const confirmOrder = async (id) => {
     MailService.sendMail({ to: result[0].email, subject, html })
     return order
   }
+  
   const status = await axios.get(`https://api-merchant.payos.vn/v2/payment-requests/${id}`, {
     headers: {
       'Content-Type': 'application/json',
