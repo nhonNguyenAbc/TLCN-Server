@@ -3,23 +3,26 @@ import VideoModel from '../models/videos.model.js';
 
 // Tạo bình luận mới cho video
 const createComment = async (req, res) => {
-  const { videoId } = req.params; 
-  const { userId, content } = req.body; 
-
+  const { videoId } = req.params; // Lấy videoId từ params
+  const { content } = req.body;  // Chỉ cần nội dung comment
+  console.log('data', req.params)
   try {
+    // Xác minh video tồn tại
     const video = await VideoModel.findById(videoId);
     if (!video) {
       return res.status(404).json({ success: false, message: 'Video not found' });
     }
 
+    // Tạo comment với userId từ req.user
     const newComment = new CommentModel({
       video: videoId,
-      user: userId,
+      user: req.user.id,
       content,
     });
 
     await newComment.save();
 
+    // Cập nhật danh sách comment của video
     await VideoModel.findByIdAndUpdate(videoId, {
       $push: { comments: newComment._id },
     });
@@ -36,7 +39,7 @@ const getCommentsForVideo = async (req, res) => {
 
   try {
     const comments = await CommentModel.find({ video: videoId })
-      .populate('user', 'name email')
+      .populate('user', 'name')
       .sort({ createdAt: -1 }); 
 
     return res.status(200).json({ success: true, comments });

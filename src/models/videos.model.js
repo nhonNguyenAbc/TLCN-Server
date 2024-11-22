@@ -29,7 +29,12 @@ const videoSchema = new mongoose.Schema(
       type: Date, // Thời gian tạo video
       default: Date.now,
     },
-    comment: {type: String,required: true, unique: true}
+    //comment: {type: String,required: true, unique: true}
+    restaurant: {
+      type: mongoose.Schema.Types.ObjectId, // Trường này sẽ tham chiếu đến mô hình Restaurant
+      ref: 'Restaurant', // Ánh xạ đến mô hình 'Restaurant'
+      required: true, // Mỗi video phải thuộc về một nhà hàng
+    },
   },
   {
     timestamps: true, // Tự động thêm createdAt và updatedAt
