@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 
 const menuItemSchema = new mongoose.Schema(
   {
+    _id: mongoose.Schema.ObjectId,
     code: { type: String, required: true },
     name: { type: String, required: true },
     category: {

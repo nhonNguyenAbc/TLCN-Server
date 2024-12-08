@@ -61,6 +61,22 @@ const getAllUsers = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+const updateUserById = async (req, res, next) => {
+  try {
+    console.log('data', req.body)
+    const user = await UserService.updateUserById(req.user.id, req.body)
+    // await LogService.createLog(req.user.id, 'Cập nhật nhân viên', HttpStatusCode.Ok)
+    next(new Response(HttpStatusCode.Ok, 'Cập nhật tài khoản thành công', user).resposeHandler(res))
+  } catch (error) {
+    // await LogService.createLog(
+    //   req.user.id,
+    //   'Cập nhật nhân viên',
+    //   error.statusCode || HttpStatusCode.InternalServerError
+    // )
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
+
 const updateUser = async (req, res, next) => {
   try {
     const { id } = req.params
@@ -161,5 +177,6 @@ export const UserController = {
   resetPassword,
   sendMail,
   findUsersByAnyField,
-  updateUser
+  updateUser,
+  updateUserById
 }

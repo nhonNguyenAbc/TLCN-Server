@@ -133,7 +133,7 @@ const countUser = async () => {
   return await UserModel.countDocuments({ deleted_at: null })
 }
 const getUserById = async (id) => {
-  return UserModel.findById(id, { _id: 1, name: 1, phone: 1, email: 1 }).orFail(() => {
+  return UserModel.findById(id, { _id: 1, name: 1, phone: 1, email: 1, username: 1 }).orFail(() => {
     throw new NotFoundError('User not found')
   })
 }
@@ -205,6 +205,12 @@ const updateUser = async (id, { name, restaurant_id }) => {
     throw new NotFoundError('User not found')
   })
 }
+const updateUserById = async (id, data) => {
+  return await UserModel.findByIdAndUpdate(id, {...data }).orFail(() => {
+    throw new NotFoundError('User not found')
+  })
+}
+
 const deleteUser = async (id) => {
   const staff = await StaffModel.findByIdAndUpdate(id, { deleted_at: Date.now() }).orFail(() => {
     throw new NotFoundError('User not found')
@@ -291,5 +297,6 @@ export const UserService = {
   resetPassword,
   adminLogin,
   findUsersByAnyField,
-  updateUser
+  updateUser,
+  updateUserById
 }

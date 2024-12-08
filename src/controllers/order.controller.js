@@ -57,6 +57,23 @@ const getAllOrderByUserId = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+const getUserOrders = async (req, res, next) => {
+  // #swagger.tags=['Order']
+  // #swagger.security = [{ "Bearer": [] }]
+  try {
+    const { page, size } = req.query
+    const data = await OrderService.getUserOrders(req.user.id, Number(page) || 1, Number(size) || 5)
+    // await LogService.createLog(req.user.id, 'Xem danh sách đơn hàng', HttpStatusCode.Ok)
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res))
+  } catch (error) {
+    await LogService.createLog(
+      req.user.id,
+      'Xem danh sách đơn hàng',
+      error.statusCode || HttpStatusCode.InternalServerError
+    )
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
 const getOrderById = async (req, res, next) => {
   // #swagger.tags=['Order']
   try {
@@ -138,6 +155,32 @@ const createOrder = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+const createWalkinOrder = async (req, res, next) => {
+  // #swagger.tags=['Order']
+  try {
+    if (CommonUtils.checkNullOrUndefined(req.body)) {
+      throw new BadRequestError('Dữ liệu là bắt buộc')
+    }
+    const result = await OrderService.createWalkinOrder(req.user.id, req.body)
+    next(new Response(HttpStatusCode.Created, 'Thành Công', result).resposeHandler(res))
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
+const updatePaymentStatus = async (req, res, next) => {
+  // #swagger.tags=['Order']
+  try {
+    if (CommonUtils.checkNullOrUndefined(req.body)) {
+      throw new BadRequestError('Dữ liệu là bắt buộc')
+    }
+    const {orderId} = req.params
+    const {paymentMethod, amount_due} = req.body
+    const result = await OrderService.updatePaymentStatus(orderId, paymentMethod, amount_due)
+    next(new Response(HttpStatusCode.Created, 'Thành Công', result).resposeHandler(res))
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
 const createDirectOrder = async (req, res, next) => {
   // #swagger.tags=['Order']
   try {
@@ -151,12 +194,14 @@ const createDirectOrder = async (req, res, next) => {
   }
 }
 const updateOrder = async (req, res, next) => {
+  console.log("first", req.body)
   // #swagger.tags=['Order']
   try {
     if (CommonUtils.checkNullOrUndefined(req.body)) {
       throw new BadRequestError('Dữ liệu là bắt buộc')
     }
     const result = await OrderService.updateOrder(req.params.id, req.body)
+    
     await LogService.createLog(req.user.id, 'Chỉnh sửa đơn hàng')
     next(new Response(HttpStatusCode.Ok, 'Thành Công', result).resposeHandler(res))
   } catch (error) {
@@ -212,10 +257,21 @@ const deleteOrder = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+const deleteItemFromOrder = async (req, res, next) => {
+  // #swagger.tags=['Order']
+  try {
+    const result = await OrderService.deleteItemFromOrder(req.params.orderid, req.params.id)
+    //await LogService.createLog(req.user.id, 'Xóa đơn hàng')
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', result).resposeHandler(res))
+  } catch (error) {
+    //await LogService.createLog(req.user.id, 'Xóa đơn hàng', error.statusCode || HttpStatusCode.InternalServerError)
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
 const getSuccessfulOrders = async (req, res, next) => {
   try {
-    const { page, size } = req.query
-    const orders = await OrderService.findSuccessfulOrders(req.user.id, Number(page) || 1, Number(size) || 5)
+    const { page, size, phone } = req.query
+    const orders = await OrderService.findSuccessfulOrders(req.user.id, Number(page) || 1, Number(size) || 5, phone||'')
     next(new Response(HttpStatusCode.Ok, 'Thành Công', orders.data, orders.info).resposeHandler(res))
   } catch (error) {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
@@ -223,8 +279,8 @@ const getSuccessfulOrders = async (req, res, next) => {
 }
 const getPendingCashOrders = async (req, res, next) => {
   try {
-    const { page, size } = req.query
-    const orders = await OrderService.findPendingCashOrders(req.user.id, Number(page) || 1, Number(size) || 5)
+    const { page, size, phone } = req.query
+    const orders = await OrderService.findPendingCashOrders(req.user.id, Number(page) || 1, Number(size) || 5, phone||'')
     next(new Response(HttpStatusCode.Ok, 'Thành Công', orders.data, orders.info).resposeHandler(res))
   } catch (error) {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
@@ -232,7 +288,7 @@ const getPendingCashOrders = async (req, res, next) => {
 }
 const totalRevenueOrder = async (req, res, next) => {
   try {
-    const result = await OrderService.totalRevenueOrder()
+    const result = await OrderService.totalRevenueOrder(req.user.id)
     next(new Response(HttpStatusCode.Ok, 'Thành Công', result).resposeHandler(res))
   } catch (error) {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
@@ -280,12 +336,23 @@ const totalRevenueOrder5Years = async (req, res, next) => {
   }
 }
 
+const totalRevenueCurrentYear = async (req, res, next) => {
+  try {
+    const revenueData = await OrderService.totalRevenueCurrentYear(req.user.id, req.query.year)
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', revenueData).resposeHandler(res))
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
+
 export const OrderController = {
   getAllOrder,
   getOrderById,
   createOrder,
+  createWalkinOrder,
   updateOrder,
   deleteOrder,
+  deleteItemFromOrder,
   confirmOrder,
   payOrderDirect,
   payOrder,
@@ -296,11 +363,14 @@ export const OrderController = {
   getSuccessfulOrders,
   getPendingCashOrders,
   totalRevenueOrder,
+  totalRevenueCurrentYear,
   countCompletedOrders,
   countOrder,
   countOrdersByStatus,
   getMostFrequentRestaurantName,
   totalRevenueOrder5Years,
   getAllOrderByUserId,
-  getAllOrderByStaffId
+  getAllOrderByStaffId,
+  updatePaymentStatus,
+  getUserOrders
 }

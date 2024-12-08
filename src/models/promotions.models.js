@@ -3,11 +3,6 @@ const promotionSchema = new mongoose.Schema({
   code: {type: String, required: true, unique: true},
   name: { type: String, required: true, trim: true },
   description: { type: String, trim: true },
-  // type: {
-  //   type: String,
-  //   enum: ['percentage_on_items', 'discount_on_total_bill'], // 'percentage_on_items' là giảm giá từng món; 'discount_on_total_bill' là giảm giá trên tổng hóa đơn
-  //   required: true,
-  // },
   discountValue: {type: Number,required: true},
   startDate: { type: Date, required: true },
   endDate: { type: Date, required: true },
@@ -19,9 +14,8 @@ const promotionSchema = new mongoose.Schema({
   },
   appliesToAllItems: {
     type: Boolean,
-    default: true, // Mặc định là giảm giá cho tất cả món nếu type là 'percentage_on_items'
+    default: true, 
   },
-  // Nếu cần áp dụng cho một số món cụ thể trong trường hợp 'percentage_on_items'
   applicableItems: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'MenuItem',

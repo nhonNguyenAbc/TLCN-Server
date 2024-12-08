@@ -19,7 +19,9 @@ UserRouter.post(
 )
 UserRouter.get('/user', requireApiKey, UserController.getUserById)
 UserRouter.get('/users', requireApiKey, authenticationAdmin, UserController.getAllUsers)
-UserRouter.put('/user/:id', requireApiKey, UserController.updateUser)
+// UserRouter.put('/user/:id', requireApiKey, UserController.updateUser)
+UserRouter.put('/user/update', requireApiKey, UserController.updateUserById)
+
 UserRouter.delete('/:id', requireApiKey, authenticationAdmin, UserController.deleteUser)
 UserRouter.post('/mailrs', UserController.sendResetPasswordEmail)
 UserRouter.put('/password', UserController.resetPassword)
