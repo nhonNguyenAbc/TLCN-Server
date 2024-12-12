@@ -23,6 +23,17 @@ const loginAdmin = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+
+const changePassword = async (req, res, next) => {
+  try {
+    const userId = req.user.id
+    const{oldPassword, newPassword} = req.body
+    const result = await UserService.changePassword({userId, oldPassword, newPassword})
+    next(new Response(HttpStatusCode.Ok, 'Đăng nhập thành công', result).resposeHandler(res))
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
 const register = async (req, res, next) => {
   try {
     // #swagger.tags=['User']
@@ -178,5 +189,6 @@ export const UserController = {
   sendMail,
   findUsersByAnyField,
   updateUser,
-  updateUserById
+  updateUserById,
+  changePassword
 }

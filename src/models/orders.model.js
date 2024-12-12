@@ -32,6 +32,7 @@ const OrderSchema = new Schema(
     user_id: { type: ObjectId, ref: 'Users', required: false }, // Không bắt buộc cho khách walk-in
     restaurant_id: { type: ObjectId, ref: 'Restaurants', required: true },
     is_walk_in: { type: Boolean, required: true, default: false }, // Phân biệt loại đơn hàng
+    rating:{type: Number, default: 0},
     name: { type: String, required: function () { return !this.is_walk_in; } }, // Bắt buộc với đơn qua website
     phone_number: { type: String, required: function () { return !this.is_walk_in; } },
     email: { type: String, required: function () { return !this.is_walk_in; } },

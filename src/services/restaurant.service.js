@@ -1,18 +1,35 @@
 import axios from 'axios'
-import { CommonUtils } from '../utils/common.util.js'
 import { NotFoundError } from '../errors/notFound.error.js'
 import { RestaurantModel } from '../models/restaurants.model.js'
 import mongoose, { Types } from 'mongoose'
-import RestaurantDto from '../dto/response/restaurant.dto.js'
 import { GOOGLE_CONFIG } from '../configs/google.config.js'
 import { TableModel } from '../models/tables.model.js'
 import MenuItem from '../models/menus.model.js'
 import { ConflictError } from '../errors/conflict.error.js'
 
-const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = '', priceRange = 'all') => {
-  const regex = new RegExp(searchTerm, 'i'); 
-  const matchConditions = { deleted_at: null, $or: [{ name: regex }, { address: regex }] };
-
+const getAllRestaurant = async (
+  page = 1, 
+  size = 5, 
+  field, 
+  sort, 
+  searchTerm = '', 
+  priceRange = 'all', 
+  provinceCode = '', 
+  districtCode = '', 
+  detail = ''
+) => {
+  const regex = new RegExp(searchTerm, 'i');
+  
+  // Tạo điều kiện lọc cơ bản
+  const matchConditions = { 
+    deleted_at: null, 
+    $or: [
+      { name: regex },
+      { 'address.detail': regex }
+    ]
+  };
+  
+  // Lọc theo priceRange
   if (priceRange === 'under_200k') {
     matchConditions.price_per_table = { $lt: 200000 };
   } else if (priceRange === '200k_500k') {
@@ -23,20 +40,33 @@ const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = ''
     matchConditions.price_per_table = { $gt: 1000000 };
   }
 
+  // Thêm lọc theo địa chỉ bằng provinceCode, districtCode
+  if (provinceCode) {
+    matchConditions['address.provinceCode'] = provinceCode;
+  }
+
+  if (districtCode) {
+    matchConditions['address.districtCode'] = districtCode;
+  }
+
+  if (detail) {
+    matchConditions['address.detail'] = new RegExp(detail, 'i');
+  }
+
   const restaurants = await RestaurantModel.aggregate([
     { $match: matchConditions },
     {
       $lookup: {
         from: 'promotions',
-        localField: 'promotions', 
-        foreignField: 'code', 
-        as: 'promotionDetails'
+        localField: 'promotions',
+        foreignField: 'code',
+        as: 'promotionDetails',
       }
     },
     {
       $unwind: {
         path: '$promotionDetails',
-        preserveNullAndEmptyArrays: true 
+        preserveNullAndEmptyArrays: true
       }
     },
     {
@@ -46,12 +76,13 @@ const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = ''
         openTime: 1,
         closeTime: 1,
         description: 1,
+        rating: 1,
         image_url: 1,
         price_per_table: 1,
-        createdAt:1,
+        createdAt: 1,
         promotionDetails: {
           $cond: {
-            if: { $eq: ['$promotionDetails.status', 'active'] }, 
+            if: { $eq: ['$promotionDetails.status', 'active'] },
             then: {
               name: '$promotionDetails.name',
               description: '$promotionDetails.description',
@@ -59,7 +90,7 @@ const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = ''
               startDate: '$promotionDetails.startDate',
               endDate: '$promotionDetails.endDate'
             },
-            else: null 
+            else: null
           }
         }
       }
@@ -71,37 +102,18 @@ const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm = ''
 
   const total = await RestaurantModel.countDocuments(matchConditions);
 
-  return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } };
+  return { 
+    data: restaurants, 
+    info: { 
+      total, 
+      page, 
+      size, 
+      number_of_pages: Math.ceil(total / size) 
+    } 
+  };
 };
 
-// const getAllRestaurant = async (page = 1, size = 5, field, sort, searchTerm) => {
-//   const filter = { deleted_at: null };
 
-//   // Thêm điều kiện tìm kiếm nếu có searchTerm
-//   if (searchTerm) {
-//     filter.$or = [
-//       { name: { $regex: searchTerm, $options: 'i' } },
-//       { address: { $regex: searchTerm, $options: 'i' } }
-//     ];
-//   }
-
-//   const restaurants = await RestaurantModel.aggregate([
-//     { $match: filter },
-//     { $skip: (page - 1) * size },
-//     { $limit: size },
-//     { $sort: { [field]: Number(sort) } },
-//     {
-//       $project: {
-//         created_at: 0,
-//         updated_at: 0,
-//         deleted_at: 0
-//       }
-//     }
-//   ]);
-
-//   const total = await RestaurantModel.countDocuments(filter);
-//   return { data: restaurants, info: { total, page, size, number_of_pages: Math.ceil(total / size) } };
-// }
 
 const getAllRestaurantByUserId = async (id, page = 1, size = 5) => {
   const restaurants = await RestaurantModel.aggregate([
@@ -149,6 +161,7 @@ const getAllRestaurantWithPromotions = async (page = 1, size = 5) => {
         openTime: 1,
         closeTime: 1,
         description: 1,
+        rating:1,
         image_url: 1,
         price_per_table: 1,
         promotionDetails: {
@@ -312,6 +325,7 @@ const createRestaurant = async (
     price_per_table
   }
 ) => {
+  console.log('address', address)
   const existingRestaurant = await RestaurantModel.findOne({
     name,
     address,
@@ -354,6 +368,9 @@ const updateRestaurant = async (
     closeTime,
     description,
     image_url,
+    limitTime,
+    orderAvailable,
+    peopleAvailable,
     slider1,
     slider2,
     slider3,
@@ -385,6 +402,9 @@ const updateRestaurant = async (
       openTime,
       closeTime,
       description,
+      orderAvailable,
+      peopleAvailable,
+      limitTime,
       image_url,
       slider1,
       slider2,
@@ -689,7 +709,26 @@ const getAllRestaurantByFilterAndSort = async (upper, lower, sort, page = 1) => 
   }
   return { data: restaurants, info: { total, page, size: 8, number_of_pages: Math.ceil(total / 8) } }
 }
+const getProvinces = async () => {
+  const provinces = await RestaurantModel.aggregate([
+    { $group: { _id: { province: "$address.province", provinceCode: "$address.provinceCode" } } },
+    { $project: { _id: 0, name: "$_id.province", code: "$_id.provinceCode" } },
+    { $sort: { name: 1 } },
+  ]);
+  return provinces;
+};
+
+const getDistrictsByProvince = async (provinceCode) => {
+  const districts = await RestaurantModel.aggregate([
+    { $match: { "address.provinceCode": provinceCode } },
+    { $group: { _id: { district: "$address.district", districtCode: "$address.districtCode" } } },
+    { $project: { _id: 0, name: "$_id.district", code: "$_id.districtCode" } },
+    { $sort: { name: 1 } },
+  ]);
+  return districts;
+};
 export const RestaurantService = {
+  getProvinces,getDistrictsByProvince,
   getAllRestaurant,
   getRestaurantById,
   createRestaurant,

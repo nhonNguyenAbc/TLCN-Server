@@ -172,41 +172,48 @@ const getAllOrderByStaffId = async (id, page = 1, size = 5) => {
   };
 };
 
-const getAllOrderByUserId = async (id, page = 1, size = 5) => {
+const getAllOrderByUserId = async (id, page = 1, size = 5, status = '') => {
+  const matchConditions = {
+    'restaurant.user_id': id,
+    'restaurant.deleted_at': null,
+  };
+
+  // Thêm điều kiện lọc theo `status` nếu có
+  if (status) {
+    matchConditions.status = status;
+  }
+
   const orders = await OrderModel.aggregate([
     {
       $lookup: {
         from: 'users',
         localField: 'user_id',
         foreignField: '_id',
-        as: 'user'
-      }
+        as: 'user',
+      },
     },
     {
-      $unwind: '$user'
+      $unwind: '$user',
     },
     {
       $lookup: {
         from: 'restaurants',
         localField: 'restaurant_id',
         foreignField: '_id',
-        as: 'restaurant'
-      }
+        as: 'restaurant',
+      },
     },
     {
-      $unwind: '$restaurant'
+      $unwind: '$restaurant',
     },
     {
-      $match: {
-        'restaurant.user_id': id,
-        'restaurant.deleted_at': null
-      }
+      $match: matchConditions,
     },
     {
-      $skip: (page - 1) * size
+      $skip: (page - 1) * size,
     },
     {
-      $limit: size
+      $limit: size,
     },
     {
       $project: {
@@ -223,36 +230,36 @@ const getAllOrderByUserId = async (id, page = 1, size = 5) => {
         orderCode: 1,
         total: 1,
         checkout: 1,
-        email: 1
-      }
-    }
-  ])
-  const list = []
-  for (const order of orders) {
-    list.push(order)
-  }
+        email: 1,
+      },
+    },
+  ]);
+
   const total = await OrderModel.countDocuments({
     deleted_at: null,
     restaurant_id: {
-      $in: await RestaurantModel.find({ user_id: id, deleted_at: null }).distinct('_id')
-    }
-  })
+      $in: await RestaurantModel.find({ user_id: id, deleted_at: null }).distinct('_id'),
+    },
+    ...(status && { status }), // Thêm điều kiện `status` nếu có
+  });
+
   return {
-    data: list,
+    data: orders,
     info: {
       total,
       page,
       size,
-      number_of_pages: Math.ceil(total / size)
-    }
-  }
-}
+      number_of_pages: Math.ceil(total / size),
+    },
+  };
+};
+
 const getUserOrders = async (userId, page = 1, size = 5) => {
   const orders = await OrderModel.aggregate([
     {
       $match: {
-        user_id: userId, // Lọc các đơn hàng liên kết với user_id
-        deleted_at: null, // Loại bỏ các đơn hàng đã bị xóa (nếu có)
+        user_id: userId, 
+        deleted_at: null, 
       },
     },
     {
@@ -281,6 +288,7 @@ const getUserOrders = async (userId, page = 1, size = 5) => {
         total: 1,
         status: 1,
         checkin: 1,
+        rating: 1,
         created_at: 1,
       },
     },
@@ -1114,6 +1122,7 @@ const getMostFrequentRestaurantName = async () => {
   }
 }
 
+
 const totalRevenueOrder5Years = async (userId) => {
   const restaurants = await RestaurantModel.find({ user_id: userId, deleted_at: null })
   if (!restaurants || restaurants.length === 0) {
@@ -1219,6 +1228,64 @@ const totalRevenueCurrentYear = async (userId, year) => {
 };
 
 
+const updateStatus = async (orderId, newStatus) => {
+  // Kiểm tra status có hợp lệ không
+  const validStatuses = Object.values(PAYMENT_STATUS);
+  if (!validStatuses.includes(newStatus)) {
+    throw new Error('Invalid status');
+  }
+
+  // Cập nhật status cho đơn hàng
+  const updatedOrder = await OrderModel.findByIdAndUpdate(
+    orderId,
+    { status: newStatus, updated_at: new Date() },
+    { new: true } // Trả về document đã cập nhật
+  );
+
+  if (!updatedOrder) {
+    throw new Error('Order not found');
+  }
+
+  return updatedOrder;
+};
+
+const updateOrderRating = async (orderId, rating) => {
+  if (rating < 0 || rating > 5) {
+    throw new Error('Rating must be between 0 and 5.');
+  }
+
+  // Cập nhật rating cho đơn hàng
+  const updatedOrder = await OrderModel.findByIdAndUpdate(
+    orderId,
+    { rating, updated_at: new Date() },
+    { new: true } // Trả về document sau khi update
+  );
+
+  if (!updatedOrder) {
+    throw new Error('Order not found.');
+  }
+
+  // Tính toán lại rating trung bình cho nhà hàng
+  const restaurantId = updatedOrder.restaurant_id; // Lấy ID nhà hàng từ đơn hàng
+  const orders = await OrderModel.find({ restaurant_id: restaurantId, rating: { $gt: 0 } });
+
+  const averageRating = orders.reduce((sum, order) => sum + order.rating, 0) / orders.length;
+
+  // Cập nhật rating cho nhà hàng
+  const updatedRestaurant = await RestaurantModel.findByIdAndUpdate(
+    restaurantId,
+    { rating: averageRating, updated_at: new Date() },
+    { new: true } // Trả về document sau khi update
+  );
+
+  if (!updatedRestaurant) {
+    throw new Error('Restaurant not found.');
+  }
+
+  return { updatedOrder, updatedRestaurant };
+};
+
+
 export const OrderService = {
   getAllOrder,
   getOrderById,
@@ -1245,5 +1312,7 @@ export const OrderService = {
   getAllOrderByUserId,
   getAllOrderByStaffId,
   updatePaymentStatus,
-  getUserOrders
+  getUserOrders,
+  updateOrderRating,
+  updateStatus
 }

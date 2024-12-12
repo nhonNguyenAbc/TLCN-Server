@@ -44,8 +44,8 @@ const getAllOrderByUserId = async (req, res, next) => {
   // #swagger.tags=['Order']
   // #swagger.security = [{ "Bearer": [] }]
   try {
-    const { page, size } = req.query
-    const data = await OrderService.getAllOrderByUserId(req.user.id, Number(page) || 1, Number(size) || 5)
+    const { page, size, status } = req.query
+    const data = await OrderService.getAllOrderByUserId(req.user.id, Number(page) || 1, Number(size) || 5, status)
     // await LogService.createLog(req.user.id, 'Xem danh sách đơn hàng', HttpStatusCode.Ok)
     next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res))
   } catch (error) {
@@ -57,6 +57,43 @@ const getAllOrderByUserId = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+
+const updateOrderStatus = async (req, res) => {
+  const { orderId, newStatus } = req.body;
+
+  try {
+    // Gọi service để cập nhật status
+    const updatedOrder = await OrderService.updateStatus(orderId, newStatus);
+    res.status(200).json({
+      status:200,
+      message: 'Order status updated successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    res.status(400).json({
+      message: error.message
+    });
+  }
+};
+const updateRating = async (req, res) => {
+  try {
+    const { orderId } = req.params; // Lấy order ID từ params
+    const { rating } = req.body; // Lấy rating từ body
+
+    if (typeof rating === 'undefined') {
+      return res.status(400).json({ message: 'Rating is required.' });
+    }
+
+    const updatedOrder = await OrderService.updateOrderRating(orderId, rating);
+
+    return res.status(200).json({
+      message: 'Rating updated successfully.',
+      data: updatedOrder,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message });
+  }
+};
 const getUserOrders = async (req, res, next) => {
   // #swagger.tags=['Order']
   // #swagger.security = [{ "Bearer": [] }]
@@ -372,5 +409,7 @@ export const OrderController = {
   getAllOrderByUserId,
   getAllOrderByStaffId,
   updatePaymentStatus,
-  getUserOrders
+  getUserOrders,
+  updateRating,
+  updateOrderStatus
 }

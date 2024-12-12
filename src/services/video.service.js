@@ -2,17 +2,28 @@ import VideoModel from '../models/videos.model.js';
 import CommentModel from '../models/comment.model.js';
 import { RestaurantModel } from '../models/restaurants.model.js';
 
-// Add a new video
 export const addVideoService = async (videoData) => {
   const newVideo = new VideoModel(videoData);
   return await newVideo.save();
 };
 
-// Get all videos with comments
-export const getVideosService = async () => {
-  const videos = await VideoModel.find().sort({ createdAt: -1 });
+export const getVideosService = async (restaurantName = "") => {
+  // Nếu không có tên nhà hàng, trả toàn bộ video
+  let restaurants = [];
+  if (restaurantName) {
+    // Tìm nhà hàng theo tên
+    restaurants = await RestaurantModel.find({
+      name: { $regex: restaurantName, $options: "i" }, // Tìm kiếm không phân biệt hoa thường
+    });
+  }
 
-  // Nếu không có video nào, trả về mảng rỗng
+  // Lấy danh sách các video
+  const videos = await VideoModel.find(
+    restaurantName && restaurants.length > 0
+      ? { restaurant: { $in: restaurants.map((r) => r._id) } } // Lọc theo nhà hàng
+      : {} // Không có điều kiện nếu không tìm theo tên
+  ).sort({ createdAt: -1 });
+
   if (videos.length === 0) {
     return [];
   }
@@ -29,7 +40,7 @@ export const getVideosService = async () => {
 };
 
 
-// Increment view count
+
 export const incrementViewCountService = async (videoId) => {
   const video = await VideoModel.findById(videoId);
 

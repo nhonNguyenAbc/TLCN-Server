@@ -22,15 +22,13 @@ RestaurantRouter.get(
 )
 RestaurantRouter.post(
   '/',
-  RestaurantCreateValidation,
-  handleValidationErrors,
+  
   requireApiKey,
   authenticationAdmin,
   RestaurantController.createRestaurant
 )
 RestaurantRouter.put(
   '/restaurant/:id',
-  RestaurantUpdateValidation,
   requireApiKey,
   authenticationAdmin,
   RestaurantController.updateRestaurant
@@ -47,5 +45,6 @@ RestaurantRouter.post('/search', RestaurantController.findRestaurantByAnyField)
 RestaurantRouter.get('/owner', requireApiKey, authenticationAdmin, RestaurantController.getRestaurantIdAndNameByUserId)
 RestaurantRouter.get('/own', requireApiKey, authenticationAdmin, RestaurantController.getAllRestaurantByUserId)
 RestaurantRouter.get('/staff', requireApiKey, authenticationStaff, RestaurantController.getStaffRestaurant)
-
+RestaurantRouter.get('/provinces', RestaurantController.getProvinces);
+RestaurantRouter.get('/districts/:provinceCode', RestaurantController.getDistrictsByProvince);
 export default RestaurantRouter

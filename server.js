@@ -18,7 +18,6 @@ import swaggerDocument from './swagger-output.json' assert { type: 'json' }
 import route from './src/routes/index.route.js'
 const app = express()
 app.use(bodyParser.urlencoded({ extended: true }))
-app.use(bodyParser.json())
 // const server = createServer(app)
 // const io = new Server(server)
 

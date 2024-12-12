@@ -10,14 +10,19 @@ import { StaffService } from '../services/staff.service.js'
 const getAllRestaurant = async (req, res, next) => {
   // #swagger.tags=['Restaurant']
   try {
-    const { sort, page, size, field, searchTerm, priceRange } = req.query; // Thêm priceRange vào đây
+    const { sort, page, size, field, searchTerm, priceRange ,  provinceCode='', 
+      districtCode = '', 
+      detail = ''} = req.query; // Thêm priceRange vào đây
     const data = await RestaurantService.getAllRestaurant(
       Number(page) || 1,
       Number(size) || 6,
       field, // field không cần chuyển đổi sang Number nếu nó là một chuỗi
       Number(sort) || -1,
       searchTerm,
-      priceRange // Truyền priceRange vào hàm Service
+      priceRange, // Truyền priceRange vào hàm Service
+      provinceCode,
+      districtCode,
+      detail
     );
     next(new Response(HttpStatusCode.Ok, 'Thành Công', data.data, data.info).resposeHandler(res));
   } catch (error) {
@@ -63,6 +68,7 @@ const getRestaurantById = async (req, res, next) => {
 }
 
 const createRestaurant = async (req, res, next) => {
+  console.log('body', req.body)
   // #swagger.tags=['Restaurant']
   try {
     if (CommonUtils.checkNullOrUndefined(req.body)) {
@@ -158,7 +164,26 @@ const getStaffRestaurant = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
+const getProvinces = async (req, res) => {
+  try {
+    const provinces = await RestaurantService.getProvinces();
+    res.status(200).json(provinces);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching provinces", error });
+  }
+};
+
+const getDistrictsByProvince = async (req, res) => {
+  try {
+    const { provinceCode } = req.params;
+    const districts = await RestaurantService.getDistrictsByProvince(provinceCode);
+    res.status(200).json(districts);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching districts", error });
+  }
+};
 export const RestaurantController = {
+  getProvinces,getDistrictsByProvince,
   getAllRestaurant,
   getRestaurantById,
   createRestaurant,

@@ -19,11 +19,13 @@ OrderRouter.get(
   authenticationAdmin,
   OrderController.getAllOrder
 )
+OrderRouter.put('/update-status', OrderController.updateOrderStatus);
+
 OrderRouter.get('/staff', requireApiKey, authenticationStaff, OrderController.getAllOrderByStaffId)
 OrderRouter.get('/owner', requireApiKey, authenticationAdmin, OrderController.getAllOrderByUserId)
 OrderRouter.get('/order/:id', OrderGetByIdValidation, handleValidationErrors, OrderController.getOrderById)
 OrderRouter.get('/user', requireApiKey, handleValidationErrors, OrderController.getUserOrders)
-
+OrderRouter.put('/:orderId/rating', OrderController.updateRating)
 OrderRouter.get(
   '/confirm/:id',
   requireApiKey,

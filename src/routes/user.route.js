@@ -8,6 +8,8 @@ const UserRouter = express.Router()
 UserRouter.post('/login', UserLoginValidation, handleValidationErrors, UserController.loginUser)
 UserRouter.post('/auth/login', UserLoginValidation, handleValidationErrors, UserController.loginAdmin)
 UserRouter.post('/register',UserRegisterValidation, handleValidationErrors, UserController.register)
+UserRouter.post('/change-password',requireApiKey, UserController.changePassword)
+
 UserRouter.post('/mail', UserController.sendMail)
 UserRouter.post(
   '/staff/resgister',

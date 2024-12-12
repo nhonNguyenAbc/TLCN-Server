@@ -128,6 +128,7 @@ const getAllMenuItemsByUserId = async (id, page = 1, size = 5) => {
         unit: 1,
         price: 1,
         discount: 1,
+        image:1,
         restaurant: {
           name: 1,
           _id: 1

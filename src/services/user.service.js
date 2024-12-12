@@ -12,15 +12,7 @@ import { RestaurantModel } from '../models/restaurants.model.js'
 import { StaffModel } from '../models/staff.model.js'
 
 const login = async ({ username, password }) => {
-  // const user = username
-  //   ? await UserModel.findOne({ username }).exec()
-  //   : email
-  //     ? await UserModel.findOne({ email }).exec()
-  //     : await UserModel.findOne({ phone })
-  //         .exec()
-  //         .orFail(() => {
-  //           throw new BadRequestError('Username or password is incorrect')
-  //         })
+  
   const user = await UserModel.findOne({
     $and: [
       {
@@ -120,6 +112,34 @@ const registerStaff = async ({ username, password, phone, email, name, restauran
   await user.save()
   return await staff.save()
 }
+
+const changePassword = async ({ userId, oldPassword, newPassword }) => {
+  // Kiểm tra xem người dùng có tồn tại không
+  const user = await UserModel.findById(userId).orFail(() => {
+    throw new BadRequestError('User not found')
+  })
+
+  // Kiểm tra mật khẩu cũ
+  const isOldPasswordValid = await checkPassword(oldPassword, user.salt, user.password)
+  if (!isOldPasswordValid) {
+    throw new BadRequestError('Old password is incorrect')
+  }
+
+  // Mã hóa mật khẩu mới
+  const newSalt = createApiKey(Math.random().toString(36).substring(2))
+  const hashedNewPassword = await createHash(newPassword + newSalt)
+
+  // Cập nhật mật khẩu mới cho người dùng
+  user.password = hashedNewPassword
+  user.salt = newSalt
+
+  // Lưu thông tin người dùng với mật khẩu mới
+  await user.save()
+
+  return { message: 'Password changed successfully' }
+}
+
+
 const authorize = async (id) => {
   id = Types.ObjectId.createFromHexString(id)
   return await UserModel.findById(id)
@@ -221,6 +241,8 @@ const deleteUser = async (id) => {
   })
 }
 
+
+
 const resetPassword = async (code, newPassword) => {
   jwt.verify(code, 'secret', async (err, decoded) => {
     if (err || !decoded) {
@@ -289,6 +311,7 @@ const findUsersByAnyField = async (searchTerm, page, size) => {
 export const UserService = {
   login,
   register,
+  changePassword,
   authorize,
   getUserById,
   getAllUsers,

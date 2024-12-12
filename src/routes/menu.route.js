@@ -9,9 +9,7 @@ MenuRouter.post(
   '/',
   requireApiKey,
   authenticationAdmin,
-  validateMenuItem,
   uploadFiles,
-  handleValidationErrors,
   MenuController.createMenuItem
 )
 MenuRouter.get('/', handleValidationErrors, MenuController.getAllMenuItems)
@@ -27,8 +25,6 @@ MenuRouter.put(
   '/menu/:id',
   requireApiKey,
   authenticationAdmin,
-  validateMenuItem,
-  handleValidationErrors,
   uploadFiles,
   MenuController.updateMenuItemById
 )
