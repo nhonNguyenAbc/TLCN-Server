@@ -1032,24 +1032,7 @@ const findPendingCashOrders = async (id, page = 1, size = 5, phone = null) => {
   };
 };
 
-// const totalRevenueOrder = async () => {
-//   const result = await OrderModel.aggregate([
-//     {
-//       $match: { status: 'COMPLETED' }
-//     },
-//     {
-//       $group: {
-//         _id: null,
-//         totalPrice: { $sum: '$total' }
-//       }
-//     }
-//   ])
-//   if (result.length > 0) {
-//     return result[0].totalPrice
-//   } else {
-//     return 0
-//   }
-// }
+
 const totalRevenueOrder = async (userId) => {
   // Lấy tất cả các nhà hàng của người dùng
   const restaurants = await RestaurantModel.find({ user_id: userId, deleted_at: null })

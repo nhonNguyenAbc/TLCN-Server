@@ -10,6 +10,7 @@ import { createHash, checkPassword } from '../middlewares/usePassword.js'
 import { MailService } from './mail.service.js'
 import { RestaurantModel } from '../models/restaurants.model.js'
 import { StaffModel } from '../models/staff.model.js'
+import { ConflictError } from '../errors/conflict.error.js'
 
 const login = async ({ username, password }) => {
   
@@ -59,13 +60,13 @@ const adminLogin = async ({ username, password }) => {
 }
 const register = async ({ username, password, phone, email, name }) => {
   if (await UserModel.findOne({ username })) {
-    throw new BadRequestError('Account existed')
+    throw new ConflictError('Account existed')
   }
   if (await UserModel.findOne({ email })) {
-    throw new BadRequestError('Email existed')
+    throw new ConflictError('Email existed')
   }
   if (await UserModel.findOne({ phone })) {
-    throw new BadRequestError('Phone existed')
+    throw new ConflictError('Phone existed')
   }
   const salt = createApiKey(Math.random().toString(36).substring(2))
   const user = new UserModel({
@@ -138,7 +139,6 @@ const changePassword = async ({ userId, oldPassword, newPassword }) => {
 
   return { message: 'Password changed successfully' }
 }
-
 
 const authorize = async (id) => {
   id = Types.ObjectId.createFromHexString(id)
@@ -241,8 +241,6 @@ const deleteUser = async (id) => {
   })
 }
 
-
-
 const resetPassword = async (code, newPassword) => {
   jwt.verify(code, 'secret', async (err, decoded) => {
     if (err || !decoded) {
@@ -259,7 +257,6 @@ const resetPassword = async (code, newPassword) => {
     }
   })
 }
-
 const findUsersByAnyField = async (searchTerm, page, size) => {
   const isObjectId = Types.ObjectId.isValid(searchTerm)
   const users = await UserModel.aggregate([

@@ -88,6 +88,32 @@ const getAllMenuItems = async (page = 1, size = 5) => {
     }
   }
 }
+const getMenuByRestaurant = async (restaurantId, page = 1, size = 10) => {
+    // Tính toán offset (số bản ghi bỏ qua)
+    const offset = (page - 1) * size;
+
+    // Tìm các menu item liên quan đến restaurantId với phân trang
+    const menuItems = await MenuItem.find({ restaurant_id: restaurantId, deleted_at: null })
+      .skip(offset)          // Bỏ qua số bản ghi đã cho từ page trước
+      .limit(size)           // Giới hạn số lượng bản ghi trả về
+      .sort({ created_at: -1 }); // Sắp xếp theo thời gian tạo (giảm dần)
+
+    // Đếm tổng số menu item để tính toán tổng số trang
+    const totalItems = await MenuItem.countDocuments({ restaurant_id: restaurantId, deleted_at: null });
+
+    // Tính toán tổng số trang
+    const totalPages = Math.ceil(totalItems / size);
+
+    return {
+      menuItems,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems,
+        pageSize: size,
+      }
+    };
+};
 const getAllMenuItemsByUserId = async (id, page = 1, size = 5) => {
   const items = await MenuItem.aggregate([
     {
@@ -253,5 +279,6 @@ export const MenuService = {
   deleteMenuItemById,
   findMenuItemsByAnyField,
   countMenu,
-  getAllMenuItemsByUserId
+  getAllMenuItemsByUserId,
+  getMenuByRestaurant
 }

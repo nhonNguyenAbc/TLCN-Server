@@ -228,14 +228,6 @@ const getRestaurantById = async (id) => {
       }
     },
     {
-      $match: {
-        $or: [
-          { 'promotionDetails.status': 'active' },
-          { 'promotionDetails': { $eq: null } }
-        ]
-      }
-    },
-    {
       $project: {
         user: { $arrayElemAt: ['$user.name', 0] },
         name: 1,
@@ -255,15 +247,22 @@ const getRestaurantById = async (id) => {
         public_id_slider4: 1,
         price_per_table: 1,
         promotionDetails: {
-          name: '$promotionDetails.name',
-          description: '$promotionDetails.description',
-          discountValue: '$promotionDetails.discountValue',
-          startDate: '$promotionDetails.startDate',
-          endDate: '$promotionDetails.endDate'
+          $cond: {
+            if: { $eq: ['$promotionDetails.status', 'active'] },
+            then: {
+              name: '$promotionDetails.name',
+              description: '$promotionDetails.description',
+              discountValue: '$promotionDetails.discountValue',
+              startDate: '$promotionDetails.startDate',
+              endDate: '$promotionDetails.endDate'
+            },
+            else: {}
+          }
         }
       }
     }
   ]).exec();
+
   const tables = await TableModel.aggregate([
     { $match: { restaurant_id: Types.ObjectId.createFromHexString(id), deleted_at: null } },
     {
@@ -273,8 +272,11 @@ const getRestaurantById = async (id) => {
       }
     }
   ]).exec();
+
   const totalPeople = tables.reduce((total, table) => total + table.people_per_table * table.number_of_tables, 0);
+
   const menus = await MenuItem.find({ restaurant_id: id, deleted_at: null }).exec();
+
   return restaurant.length > 0
     ? {
         restaurant: restaurant[0],
@@ -333,7 +335,7 @@ const createRestaurant = async (
   })
 
   if (existingRestaurant) {
-    throw new NotFoundError('Nhà hàng đã tồn tại')
+    throw new ConflictError('Nhà hàng đã tồn tại')
   }
   const newRestaurant = new RestaurantModel({
     _id: new mongoose.Types.ObjectId(),

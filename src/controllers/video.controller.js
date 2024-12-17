@@ -1,15 +1,8 @@
-// controllers/video.controller.js
-import {
-  addVideoService,
-  getVideosService,
-  incrementViewCountService,
-  getVideosByUserIdService,
-  deleteVideoService,
-  updateVideoService, // Import service mới
-} from '../services/video.service.js';
+import { HttpStatusCode } from "axios";
+import { Response } from "../dto/response/response.js";
+import {VideoService} from "../services/video.service.js"
 
 const addVideo = async (req, res) => {
-  // Kiểm tra nếu không có file được tải lên
   if (!req.file) {
     return res.status(400).json({ message: 'Vui lòng tải lên một video.' });
   }
@@ -21,20 +14,18 @@ const addVideo = async (req, res) => {
   }
 
   try {
-    // Lấy URL video từ Cloudinary (req.file.path được Multer cung cấp)
     const videoUrl = req.file.path;
 
-    const newVideo = await addVideoService({
+    const result = await VideoService.addVideo({
       videoUrl,
       title,
       description,
       restaurant
     });
 
-    res.status(201).json({ message: 'Video đã được thêm thành công', video: newVideo });
+    return new Response(HttpStatusCode.Ok, 'Đăng nhập thành công', result).resposeHandler(res)
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: 'Đã có lỗi xảy ra, vui lòng thử lại sau.' });
+      next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 };
 
@@ -42,7 +33,7 @@ const addVideo = async (req, res) => {
 const getVideos = async (req, res) => {
   try {
     const {restaurantName} = req.query
-    const videos = await getVideosService(restaurantName);
+    const videos = await VideoService.getVideos(restaurantName);
     res.status(200).json(videos);
   } catch (error) {
     console.error(error);
@@ -50,22 +41,22 @@ const getVideos = async (req, res) => {
   }
 };
 
-const incrementViewCount = async (req, res) => {
-  const { videoId } = req.params;
+// const incrementViewCount = async (req, res) => {
+//   const { videoId } = req.params;
 
-  try {
-    const updatedVideo = await incrementViewCountService(videoId);
-    res.status(200).json({ message: 'Lượt xem đã được cập nhật.', video: updatedVideo });
-  } catch (error) {
-    console.error(error);
+//   try {
+//     const updatedVideo = await incrementViewCountService(videoId);
+//     res.status(200).json({ message: 'Lượt xem đã được cập nhật.', video: updatedVideo });
+//   } catch (error) {
+//     console.error(error);
 
-    if (error.message === 'Video not found') {
-      return res.status(404).json({ message: 'Video không tồn tại.' });
-    }
+//     if (error.message === 'Video not found') {
+//       return res.status(404).json({ message: 'Video không tồn tại.' });
+//     }
 
-    res.status(500).json({ message: 'Không thể cập nhật lượt xem, vui lòng thử lại.' });
-  }
-};
+//     res.status(500).json({ message: 'Không thể cập nhật lượt xem, vui lòng thử lại.' });
+//   }
+// };
 
 
 const getVideosByUserId = async (req, res) => {
@@ -73,7 +64,7 @@ const getVideosByUserId = async (req, res) => {
   const { page = 1, limit = 10 } = req.query;
 
   try {
-    const { videos, totalPages, currentPage } = await getVideosByUserIdService(userId, page, limit);
+    const { videos, totalPages, currentPage } = await VideoService.getVideosByUserId(userId, page, limit);
 
     res.status(200).json({ videos, totalPages, currentPage });
   } catch (error) {
@@ -83,14 +74,11 @@ const getVideosByUserId = async (req, res) => {
 };
 
 
-
-
-// Delete a video
 const deleteVideo = async (req, res) => {
   const { videoId } = req.params;
 
   try {
-    const deletedVideo = await deleteVideoService(videoId);
+    const deletedVideo = await VideoService.deleteVideo(videoId);
     res.status(200).json({ message: 'Video đã được xóa thành công.', video: deletedVideo });
   } catch (error) {
     console.error(error);
@@ -103,14 +91,13 @@ const deleteVideo = async (req, res) => {
   }
 };
 
-// Update a video
 const updateVideo = async (req, res) => {
   const { videoId } = req.params;
   const { title, description, videoUrl } = req.body;
   console.log('data', req.body)
 
   try {
-    const updatedVideo = await updateVideoService(videoId, { title, description, videoUrl });
+    const updatedVideo = await VideoService.updateVideo(videoId, { title, description, videoUrl });
     res.status(200).json({ message: 'Video đã được cập nhật thành công.', video: updatedVideo });
   } catch (error) {
     console.error(error);
@@ -126,9 +113,8 @@ const updateVideo = async (req, res) => {
 export const VideoController = {
   addVideo,
   getVideos,
-  incrementViewCount,
   getVideosByUserId,
-  deleteVideo, // Xuất hàm mới
-  updateVideo, // Xuất hàm mới
+  deleteVideo, 
+  updateVideo,
 };
 

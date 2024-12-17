@@ -21,6 +21,8 @@ MenuRouter.get(
   MenuController.getAllMenuItemsByUserId
 )
 MenuRouter.get('/menu/:id', handleValidationErrors, MenuController.getMenuItemById)
+
+MenuRouter.get('/:restaurantId', handleValidationErrors, MenuController.getMenuByRestaurant)
 MenuRouter.put(
   '/menu/:id',
   requireApiKey,

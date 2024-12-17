@@ -59,16 +59,15 @@ const getRestaurantById = async (req, res, next) => {
   try {
     const data = await RestaurantService.getRestaurantById(req.params.id)
     if (data === null) {
-      next(new Response(HttpStatusCode.NotFound, 'Không tìm thấy nhà hàng', data).resposeHandler(res))
+      return (new Response(HttpStatusCode.NotFound, 'Không tìm thấy nhà hàng', data).resposeHandler(res))
     }
-    next(new Response(HttpStatusCode.Ok, 'Thành Công', data).resposeHandler(res))
+    return (new Response(HttpStatusCode.Ok, 'Thành Công', data).resposeHandler(res))
   } catch (error) {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
 
 const createRestaurant = async (req, res, next) => {
-  console.log('body', req.body)
   // #swagger.tags=['Restaurant']
   try {
     if (CommonUtils.checkNullOrUndefined(req.body)) {

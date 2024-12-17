@@ -44,7 +44,16 @@ const getMenuItemById = async (req, res, next) => {
     next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 }
-
+const getMenuByRestaurant = async (req, res, next) => {
+  try {
+    const {page, size} = req.query
+    const {restaurantId} = req.params
+    const item = await MenuService.getMenuByRestaurant(restaurantId, page||1, size||6)
+    next(new Response(HttpStatusCode.Ok, 'Thành Công', item).resposeHandler(res))
+  } catch (error) {
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+  }
+}
 const updateMenuItemById = async (req, res, next) => {
   try {
     const updates = req.body;  
@@ -103,5 +112,6 @@ export const MenuController = {
   deleteMenuItemById,
   findMenuByAnyField,
   countMenu,
-  getAllMenuItemsByUserId
+  getAllMenuItemsByUserId,
+  getMenuByRestaurant
 }

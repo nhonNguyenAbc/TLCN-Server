@@ -1,10 +1,13 @@
-import * as reviewService from "../services/review.service.js";
+import { HttpStatusCode } from "axios";
 import uploadFiles from "../middlewares/upload.middleware.js";
+import { ReviewService } from "../services/review.service.js";
+import { Response } from "../dto/response/response.js";
 
-// Tạo Review
+
+
 const createReviewController = async (req, res) => {
   try {
-    console.log("data",req.body)
+
     await uploadFiles(req, res, async () => {
       const image = req.file
         ? {
@@ -13,33 +16,42 @@ const createReviewController = async (req, res) => {
           }
         : null;
 
+      const { restaurant_id, content, parent_id } = req.body;
+
       const reviewData = {
-        restaurant_id: req.body.restaurant_id,
-        user_id: req.user.id,
-        content: req.body.content,
+        restaurant_id,
+        user_id: req.user.id, // Lấy ID người dùng từ token
+        content,
+        parent_id: parent_id || null, // Gán parent_id nếu có
       };
 
+      // Thêm image nếu có
       if (image) {
         reviewData.image = image;
       }
+      // Nếu parent_id có giá trị, kiểm tra bình luận cha
+      if (parent_id) {
+        const parentReview = await ReviewService.getReviewById(parent_id);
 
-      const result = await reviewService.createReview(reviewData);
+        if (!parentReview) {
+          next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+        }
+      }
 
-      return res.status(201).json({
-        success: true,
-        data: result,
-      });
+      const result = await ReviewService.createReview(reviewData);
+      return new Response(HttpStatusCode.Ok, 'Đăng nhập thành công', result).resposeHandler(res)
+     
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
-  }
+       next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
+   }
 };
 
-// Xóa Review
+
 const deleteReviewController = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await reviewService.deleteReview(id);
+    const result = await ReviewService.deleteReview(id);
 
     if (!result) {
       return res.status(404).json({
@@ -53,15 +65,14 @@ const deleteReviewController = async (req, res) => {
       message: "Review đã xóa thành công.",
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 };
 
-// Cập nhật Review
 const updateReviewController = async (req, res) => {
   try {
     const { id } = req.params;
-    const result = await reviewService.updateReview(id, {
+    const result = await ReviewService.updateReview(id, {
       content: req.body.content,
     });
 
@@ -77,26 +88,22 @@ const updateReviewController = async (req, res) => {
       data: result,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 };
 
-// Lấy danh sách Review theo restaurantId
 const getAllReviewsController = async (req, res) => {
   try {
     const { restaurant_id } = req.params;
-    const {page, limit} = req.query
-    const reviews = await reviewService.getAllReviewsByRestaurant(restaurant_id, page, limit);
+    const { page = 1, limit = 10 } = req.query;
 
-    return res.status(200).json({
-      success: true,
-      data: reviews,
-    });
+    const result = await ReviewService.getReviewsWithReplies(restaurant_id, page, limit);
+    return new Response(HttpStatusCode.Ok, 'Đăng nhập thành công', result.comments, result.pagination).resposeHandler(res)
+
   } catch (error) {
-    return res.status(500).json({ success: false, message: error.message });
+    next(new Response(error.statusCode || HttpStatusCode.InternalServerError, error.message, null).resposeHandler(res))
   }
 };
-
 
 export const ReviewController = {
     createReviewController,

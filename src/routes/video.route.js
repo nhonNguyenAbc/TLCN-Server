@@ -13,6 +13,6 @@ VideoRouter.get('/user', requireApiKey, authenticationAdmin, VideoController.get
 VideoRouter.put('/update/:videoId',uploadVideoMiddleware, VideoController.updateVideo);
 VideoRouter.delete('/delete/:videoId', VideoController.deleteVideo);
 // Route cập nhật lượt xem video
-VideoRouter.put('/:videoId/view', VideoController.incrementViewCount);
+// VideoRouter.put('/:videoId/view', VideoController.incrementViewCount);
 
 export default VideoRouter

@@ -1,19 +1,25 @@
 import ReviewModel from "../models/reviews.model.js";
 import { UserModel } from "../models/users.model.js";
 
-// Dịch vụ tạo bình luận
-export const createReview = async (data) => {
+const createReview = async (reviewData) => {
   try {
-    console.log(data)
-    const review = new ReviewModel(data);
-    return await review.save();
+    const newReview = await ReviewModel.create(reviewData);
+    return newReview;
   } catch (error) {
-    throw error;
+    throw new Error("Error creating review: " + error.message);
   }
 };
 
-// Dịch vụ xóa bình luận
-export const deleteReview = async (id) => {
+const getReviewById = async (id) => {
+  try {
+    const review = await ReviewModel.findById(id);
+    return review;
+  } catch (error) {
+    throw new Error("Error fetching review: " + error.message);
+  }
+};
+
+const deleteReview = async (id) => {
   try {
     return await ReviewModel.findByIdAndUpdate(
       id,
@@ -25,8 +31,7 @@ export const deleteReview = async (id) => {
   }
 };
 
-// Dịch vụ cập nhật bình luận
-export const updateReview = async (id, data) => {
+const updateReview = async (id, data) => {
   try {
     return await ReviewModel.findByIdAndUpdate(
       id,
@@ -38,51 +43,64 @@ export const updateReview = async (id, data) => {
   }
 };
 
-// Dịch vụ lấy danh sách bình luận theo restaurantId
-export const getAllReviewsByRestaurant = async (restaurant_id, page = 1, limit = 3) => {
-    try {
-        // Tính toán skip dựa trên page và limit
-        const skip = (page - 1) * limit;
 
-        // Truy vấn tất cả bình luận theo restaurant_id với phân trang và sắp xếp
-        const reviews = await ReviewModel.find({
-            restaurant_id,
-            deleted_at: null,
-        })
-            .sort({ created_at: -1 }) // Sắp xếp giảm dần theo created_at
-            .skip(skip) // Bỏ qua số lượng bản ghi
-            .limit(limit) // Giới hạn số lượng bản ghi
-            .lean(); // Dùng lean để làm việc với dữ liệu thuần JavaScript
+const getReviewsWithReplies = async (restaurant_id, page, limit) => {
+  const skip = (page - 1) * limit;
+  const rootComments = await ReviewModel.find({
+    restaurant_id,
+    parent_id: null,
+  })
+    .skip(skip)
+    .limit(limit)
+    .sort({ created_at: -1 })
+    .lean();
 
-        // Lấy tất cả user_id từ các bình luận
-        const userIds = reviews.map((review) => review.user_id);
+  const allComments = await ReviewModel.find({ restaurant_id }).lean();
+  const userIds = [...new Set(allComments.map((comment) => comment.user_id))];
+  const users = await UserModel.find({ _id: { $in: userIds } }).select("_id username").lean();
 
-        // Truy vấn tất cả thông tin user dựa vào mảng user_id
-        const users = await UserModel.find({ _id: { $in: userIds } })
-            .select("_id username") // Lấy thông tin cần thiết
-            .lean();
+  const userMap = users.reduce((map, user) => {
+    map[user._id] = user.username;
+    return map;
+  }, {});
 
-        // Tạo một Map để tìm thông tin user nhanh chóng
-        const userMap = new Map(users.map((user) => [user._id.toString(), user.username]));
+  const buildTree = (parentId) =>
+    allComments
+      .filter((comment) => String(comment.parent_id) === String(parentId))
+      .map((comment) => ({
+        ...comment,
+        username: userMap[comment.user_id] || "Unknown",
+        replies: buildTree(comment._id),
+      }));
 
-        // Thêm username vào từng bình luận
-        const reviewsWithUsernames = reviews.map((review) => ({
-            ...review,
-            username: userMap.get(review.user_id.toString()) || "Unknown", // Thêm username
-        }));
+  const tree = rootComments.map((comment) => ({
+    ...comment,
+    username: userMap[comment.user_id] || "Unknown",
+    replies: buildTree(comment._id),
+  }));
 
-        // Tính tổng số bình luận và số trang
-        const total = await ReviewModel.countDocuments({ restaurant_id, deleted_at: null });
-        const totalPages = Math.ceil(total / limit); // Tính tổng số trang
+  const totalRootComments = await ReviewModel.countDocuments({
+    restaurant_id,
+    parent_id: null,
+  });
 
-        // Trả về kết quả bao gồm phân trang
-        return {
-            data: reviewsWithUsernames,
-            currentPage: page,
-            total,
-            totalPages,
-        };
-    } catch (error) {
-        throw error;
-    }
+  const totalPages = Math.ceil(totalRootComments / limit);
+
+  return {
+    comments: tree,
+    pagination: {
+      totalComments: totalRootComments,
+      totalPages,
+      currentPage: page,
+      perPage: limit,
+    },
+  };
 };
+
+export const ReviewService={
+  createReview,
+  updateReview,
+  deleteReview,
+  getReviewsWithReplies,
+  getReviewById,
+}
