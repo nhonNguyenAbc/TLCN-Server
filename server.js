@@ -13,15 +13,15 @@ import mongoose from 'mongoose'
 import { logRequestTime } from './src/middlewares/logRequestTime.middleware.js'
 import { logRequestMethod } from './src/middlewares/logRequestMethod.middleware.js'
 import { DATABASE_CONFIG } from './src/configs/database.config.js'
-import swaggerUi from 'swagger-ui-express'
-import swaggerDocument from './swagger-output.json' assert { type: 'json' }
+// import swaggerUi from 'swagger-ui-express'
+// import swaggerDocument from './swagger-output.json' assert { type: 'json' }
 import route from './src/routes/index.route.js'
 const app = express()
 app.use(bodyParser.urlencoded({ extended: true }))
 // const server = createServer(app)
 // const io = new Server(server)
 
-const port = process.env.PORT || 7000
+const PORT = process.env.PORT || 7000
 app.use(
   cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -47,7 +47,7 @@ const limiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false
 })
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
+// app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 const start = async () => {
   try {
@@ -55,8 +55,8 @@ const start = async () => {
     await mongoose.connect(DB_CONNECTION_STR)
     console.log('Connect success')
 
-    app.listen(port, () => {
-      console.log(`Listening at port ${port}`)
+    app.listen(PORT, () => {
+      console.log(`Listening at port ${PORT}`)
     })
   } catch (error) {
     console.log('Error connect to database with error: ' + error.message)
