@@ -9,7 +9,8 @@
     "start": "node ./swagger.js && nodemon ./server.js",
     "lint": "eslint . --ext .js",
     "beautiful": "prettier --single-quote --trailing-comma all --semi false --write 'src/**/*.{js,json,scss}'",
-    "swagger": "node ./swagger.js"
+    "swagger": "node ./swagger.js",
+    "build": "npm install"
   },
   "keywords": [],
   "author": "",
